@@ -1,8 +1,13 @@
 #ifndef NEURALNETWORK_H
 #define NEURALNETWORK_H
 
+#include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <string>
+#include <ctime>
+#include <cstdlib>
+#include <cmath>
 
 using namespace std;
 
@@ -16,6 +21,7 @@ private:
   bool _isInitialized;
   int _nDis;
   int _nCon;
+  int _nHidden;
   int _nX;
   int _nY;
   int _nEpochs;
@@ -26,6 +32,8 @@ private:
   short *_v;
 
   void _init(); // initializes network
+  void _study(); // studies network
+  void _countSample(short *x, short *y, short *hid); // counts a sample
   void _readFromFile(string str = "input.txt");
   void _writetoFile(string str = "output.txt");
 };
