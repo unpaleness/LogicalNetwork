@@ -34,10 +34,15 @@ void NeuralNetwork::_init()
     _v = new short [_nY * _nHidden];
     _isInitialized = true;
   }
+  _initializeCoefficients();
+}
+
+void NeuralNetwork::_initializeCoefficients()
+{
   for(int i = 0; i < _nX * _nHidden; i++)
-    _w[i] = rand() % 2;
+    _w[i] = rand() % 1;
   for(int i = 0; i < _nY * _nHidden; i++)
-    _v[i] = rand() % 2;
+    _v[i] = rand() % 1;
 }
 
 void NeuralNetwork::_study()
@@ -48,232 +53,207 @@ void NeuralNetwork::_study()
   short *ySample;                     // current sample outputs
   short *dY = new short [_nY];        // output layer errors
   bool *cHid = new bool [_nHidden];   // need to change hidden neuron
+  short hamming;                      // Hamming distance for sample's output
+  short epochHamming;                 // Hamming distance for epoch
+  short epochHammingPrev = _nSamples * _nY;
   ofstream output("study.log", ios::out);
   for(int nEpoch = 0; nEpoch < _nEpochs; nEpoch++)
   {
-    output << "\nEpoch #" << nEpoch << '\n';
+    epochHamming = 0;
+    output << "Epoch #" << nEpoch << '\n';
     for(int nSample = 0; nSample < _nSamples; nSample++)
     {
-      xSample = _xSample + nSample * _nX;
-      ySample = _ySample + nSample * _nY;
-      for(int i = 0; i < _nHidden; i++)
+      xSample = _xSample + nSample * _nX; // setting up x for current sample
+      ySample = _ySample + nSample * _nY; // setting up y for current sample
+      for(int i = 0; i < _nHidden; i++) // making all hidden neurons unchanged
         cHid[i] = false;
       /* count current sample */
       _countSample(xSample, y, hid);
       /* output info */
-      output << "\n Sample #" << nSample << '\n';
-      output << ' ';
-      for(int i = 0; i < _nX; i++)
-        output << ' ' << xSample[i];
-      output << "\n ";
+      output << " Sample #" << nSample << '\n';
+//      output << ' ';
+//      for(int i = 0; i < _nX; i++)
+//        output << ' ' << xSample[i];
+//      output << "\n ";
+//      for(int i = 0; i < _nY; i++)
+//        output << ' ' << ySample[i];
+//      output << "\n  Hidden neurons\n ";
+//      for(int i = 0; i < _nHidden; i++)
+//        output << ' ' << hid[i];
+//      output << '\n';
+//      output << "  Output neurons\n";
+//      output << ' ';
+//      for(int i = 0; i < _nY; i++)
+//        output << ' ' << y[i];
+      hamming = 0;
       for(int i = 0; i < _nY; i++)
-        output << ' ' << ySample[i];
-      output << "\n ";
-      for(int i = 0; i < _nHidden; i++)
-        output << ' ' << hid[i];
-      output << "\n ";
-      for(int i = 0; i < _nY; i++)
-        output << ' ' << y[i];
-      output << "\n  Neurons hidden\n     ";
-      for(int i = 0; i < _nX; i++)
-        output << ' ' << xSample[i];
-      for(int j = 0; j < _nHidden; j++)
-      {
-        output << "\n  " << setw(2) << j << ':';
-        for(int i = 0; i < _nX; i++)
-          output << ' ' << _w[i * _nHidden + j];
-      }
-      output << "\n  Neurons output\n     ";
-      for(int i = 0; i < _nHidden; i++)
-        output << ' ' << hid[i];
-      for(int j = 0; j < _nY; j++)
-      {
-        output << "\n  " << setw(2) << j << ':';
-        for(int i = 0; i < _nHidden; i++)
-          output << ' ' << _v[i * _nY + j];
-      }
-      output << '\n';
-      output << "  Studying\n";
+        if(y[i] != ySample[i])
+          hamming++;
+      epochHamming += hamming;
+      output << "  Hamming before: " << setw(2) << hamming << '\n';
+//      output << "\n  Hidden coefficients\n     ";
+//      for(int i = 0; i < _nX; i++)
+//        output << ' ' << xSample[i];
+//      for(int j = 0; j < _nHidden; j++)
+//      {
+//        output << "\n  " << setw(2) << j << ':';
+//        for(int i = 0; i < _nX; i++)
+//          output << ' ' << _w[j * _nX + i];
+//      }
+//      output << "\n  Output coefficients\n     ";
+//      for(int i = 0; i < _nHidden; i++)
+//        output << ' ' << hid[i];
+//      for(int j = 0; j < _nY; j++)
+//      {
+//        output << "\n  " << setw(2) << j << ':';
+//        for(int i = 0; i < _nHidden; i++)
+//          output << ' ' << _v[j * _nHidden + i];
+//      }
+//      output << "\n  Studying\n";
       /* <1> check which hidden neurons should be changed */
-      output << "   Output neurons\n";
+//      output << "   Output layer\n";
       for(int j = 0; j < _nY; j++)
       {
-        if(y[j] == 1 && ySample[j] == 0) // we have 1 and expect 0
-                                         // so we need every unit to be 0
+        if(y[j] == 0 && ySample[j] == 1) // if we have 0 but want 1
         {
-          output << "   " << setw(2) << j << ':';
+          int amount = 0; // amount of zeroes
           for(int i = 0; i < _nHidden; i++)
-            if(hid[i] == 1 && _v[j * _nHidden + i] == 1)
-            {
-              cHid[i] = true;
-              output << ' ' << i;
-            }
-          output << " hidden neurons should be changed\n";
-        }
-        if(y[j] == 0 && ySample[j] == 1) // we have 0 and expect 1 so we
-                                         // need at least one unit to be 1
-        {
-          output << "   " << setw(2) << j << ':';
-          int amount = 0;
-          int index;
-          int k = 0;
-          for(int i = 0; i < _nHidden; i++)
-            if(hid[i] == 0 && _v[j * _nHidden + i] == 1)
+            if(hid[i] == 0 && cHid[i] == false) // if it is zero and unchecked
               amount++;
-          if(amount > 0)
+          if(amount == _nHidden) // if all hiddens are zeroes
           {
-            index = rand() % amount;
+            int index = rand() % _nHidden;
             for(int i = 0; i < _nHidden; i++)
-              if(hid[i] == 0 && _v[j * _nHidden + i] == 1)
+              if(i == index)
               {
-                if(k == index)
-                {
-                  cHid[i] = true;
-                  output << ' ' << i;
-                  break;
-                }
-                k++;
+                cHid[i] = true;
+//                output << "    " << setw(2) << j << ": " << i
+//                       << " hidden neuron should be changed\n";
+                break;
               }
           }
-          else
-          {
-            for(int i = 0; i < _nHidden; i++)
-              if(hid[i] == 0)
-                amount++;
-            index = rand() % amount;
-            for(int i = 0; i < _nHidden; i++)
-              if(hid[i] == 0)
-              {
-                if(k == index)
-                {
-                  cHid[i] = true;
-                  output << ' ' << i;
-                  break;
-                }
-                k++;
-              }
-          }
-          output << " hidden neurons should be changed\n";
         }
       }
       /* <2> changing coefficients for selected hidden neurons */
-      output << "   Hidden neurons\n";
-      /* Disjunctors */
-      for(int j = 0; j < _nDis; j++)
-      {
-        if(cHid[j]) // if it needs to be changed
-        {
-          output << "   " << setw(2) << j << ':';
-          if(hid[j] == 1) // and now it is 1
-          {
-            for(int i = 0; i < _nX; i++)
-              if(xSample[i] == 1)
-              {
-                _w[j * _nX + i] = 0;
-                output << ' ' << i;
-              }
-            output << " coefs should be 0\n";
-          }
-          else // and now it is 0
-          {
-            int amount = 0;
-            int index;
-            int k = 0;
-            for(int i = 0; i < _nX; i++)
-              if(xSample[i] == 1)
-                amount++;
-            if(amount > 0)
+//      output << "   Hidden layer\n";
+      for(int j = 0; j < _nHidden; j++)
+        if(cHid[j]) // if this neuron needs to be changed
+          if(j < _nDis) // if neuron is a disjunctor
+            if(hid[j] == 0) // if neuron is 0 so it needs to be true
             {
-              index = rand() % amount;
+//              output << " d  " << setw(2) << j << ':';
+              int amount = 0; // amount of trues among inputs
               for(int i = 0; i < _nX; i++)
                 if(xSample[i] == 1)
-                {
-                  if(k == index)
-                  {
-                    _w[j * _nX + i] = 1;
-                    break;
-                  }
-                  k++;
-                }
-              output << ' ' << index << " coef should be 1";
-            }
-            output << '\n';
-          }
-        }
-      }
-      /* Conjunctors */
-      for(int j = _nDis; j < _nHidden; j++)
-        if(hid[j]) // if it needs to be changed
-        {
-          output << "   " << setw(2) << j << ':';
-          if(hid[j] == 0) // and now it is 0
-          {
-            for(int i = 0; i < _nX; i++)
-              if(xSample[i] == 0)
+                  amount++;
+              if(amount > 0)
               {
-                _w[j * _nX + i] = 1;
-                output << ' ' << i;
+                int index = rand() % amount;
+                int k = 0;
+                for(int i = 0; i < _nX; i++)
+                  if(xSample[i] == 1)
+                  {
+                    if(k == index)
+                    {
+                      _w[j * _nX + i] = 1;
+                      break;
+                    }
+                    k++;
+                  }
+//                output << ' ' << index << " coef changes to true\n";
               }
-            output << " coefs should be 1\n";
-          }
-          else // and now it is 1
-          {
-            int amount = 0;
-            int index;
-            int k = 0;
-            for(int i = 0; i < _nX; i++)
-              if(xSample[i] == 0)
-                amount++;
-            if(amount > 0)
+              else
+              {
+//                output << " should be 1 but no one true input was found!\n";
+              }
+            }
+            else // if neuron is 1 so it needs to be false
             {
-              index = rand() % amount;
+//              output << " d  " << setw(2) << j << ':';
+              for(int i = 0; i < _nX; i++)
+                if(xSample[i] == 1 && _w[j * _nX + i] == 1)
+                {
+                  _w[j * _nX + i] = 0;
+                  output << ' ' << i;
+                }
+//              output << " coefs changes from 1 to 0\n";
+            }
+          else // if neuron is a conjunctor
+            if(hid[j] == 0) // if neuron is 0 so it needs to be true
+            {
+//              output << " c  " << setw(2) << j << ':';
+              for(int i = 0; i < _nX; i++)
+                if(xSample[i] == 0 && _w[j * _nX + i] == 0)
+                {
+                  _w[j * _nX + i] = 1;
+//                  output << ' ' << i;
+                }
+//              output << " coefs changes from 0 to 1\n";
+            }
+            else // if neuron is 1 so it needs to be false
+            {
+//              output << " c  " << setw(2) << j << ':';
+              int amount = 0; // amount of falses among inputs
               for(int i = 0; i < _nX; i++)
                 if(xSample[i] == 0)
-                {
-                  if(k == index)
+                  amount++;
+              if(amount > 0)
+              {
+                int index = rand() % amount;
+                int k = 0;
+                for(int i = 0; i < _nX; i++)
+                  if(xSample[i] == 0)
                   {
-                    _w[j * _nX + i] = 0;
-                    break;
+                    if(k == index)
+                    {
+                      _w[j * _nX + i] = 0;
+                      break;
+                    }
+                    k++;
                   }
-                  k++;
-                }
-              output << ' ' << index << " coef should be 0";
+//                output << ' ' << index << " coef changes to false\n";
+              }
+              else
+              {
+//                output << " should be 0 but no one false input was found!\n";
+              }
             }
-            output << '\n';
-          }
-        }
       /* <3> changing coefficients for output neurons */
-      output << "   Output neurons\n";
       _countSample(xSample, y, hid);
+//      output << "  Hidden coefficients\n     ";
+//      for(int i = 0; i < _nX; i++)
+//        output << ' ' << xSample[i];
+//      for(int j = 0; j < _nHidden; j++)
+//      {
+//        output << "\n  " << setw(2) << j << ':';
+//        for(int i = 0; i < _nX; i++)
+//          output << ' ' << _w[j * _nX + i];
+//      }
+//      output << "\n  Output coefficients\n     ";
+//      for(int i = 0; i < _nHidden; i++)
+//        output << ' ' << hid[i];
+//      for(int j = 0; j < _nY; j++)
+//      {
+//        output << "\n  " << setw(2) << j << ':';
+//        for(int i = 0; i < _nHidden; i++)
+//          output << ' ' << _v[j * _nHidden + i];
+//      }
+//      output << "\n   Output layer\n";
       for(int j = 0; j < _nY; j++)
       {
-        if(y[j] == 1 && ySample[j] == 0) // we have 1 and expect 0
-                                         // so we need every unit to be 0
+        if(y[j] == 0 && ySample[j] == 1) // if we have 0 but want 1
         {
-          output << "   " << setw(2) << j << ':';
+//          output << "    " << setw(2) << j << ':';
+          int amount = 0; // amount of trues among hiddens
           for(int i = 0; i < _nHidden; i++)
-            if(hid[j] == 1)
-            {
-              _v[j * _nHidden + i] = 0;
-              output << ' ' << i;
-            }
-          output << " coefs should be 0\n";
-        }
-        if(y[j] == 0 && ySample[j] == 1) // we have 0 and expect 1
-                                        // so we need at least one unit to be 1
-        {
-          output << "   " << setw(2) << j << ':';
-          int amount = 0;
-          int index;
-          int k = 0;
-          for(int i = 0; i < _nHidden; i++)
-            if(hid[j] == 1)
+            if(hid[i] == 1)
               amount++;
           if(amount > 0)
           {
-            index = rand() % amount;
+            int index = rand() % amount;
+            int k = 0;
             for(int i = 0; i < _nHidden; i++)
-              if(hid[j] == 1)
+              if(hid[i] == 1)
               {
                 if(k == index)
                 {
@@ -282,16 +262,55 @@ void NeuralNetwork::_study()
                 }
                 k++;
               }
-            output << ' ' << index << " coef should be 1";
+//            output << ' ' << index << " coef changes from 0 to 1\n";
           }
-          output << '\n';
+          else
+          {
+//            output << " should be 1 but no one true hidden was found!\n";
+          }
+        }
+        if(y[j] == 1 && ySample[j] == 0) // if we have 1 but want 0
+        {
+//          output << "    " << setw(2) << j << ':';
+          for(int i = 0; i < _nHidden; i++)
+            if(hid[i] == 1 && _v[j * _nHidden + i] == 1)
+            {
+              _v[j * _nHidden + i] = 0;
+//              output << ' ' << i;
+            }
+//          output << " coefs changes from 1 to 0\n";
         }
       }
-      output << "\n  ";
-      for(int i = 0; i < _nY; i++)
-        output << ' ' << y[i];
-      output << "\n";
+      _countSample(xSample, y, hid);
+//      output << '\n';
+//      output << "  Output neurons\n";
+//      output << ' ';
+//      for(int i = 0; i < _nY; i++)
+//        output << ' ' << y[i];
+//      hamming = 0;
+//      for(int i = 0; i < _nY; i++)
+//        if(y[i] != ySample[i])
+//          hamming++;
+//      output << "  Hamming after:  " << setw(2) << hamming << '\n';
     }
+    if(epochHamming >= epochHammingPrev && epochHamming != 0)
+    {
+      epochHammingPrev = _nSamples * _nY;
+      _initializeCoefficients();
+      output << " Bad epoch! Hammings are not decreasing. "
+             << "Reinitializing coefficients\n";
+    }
+    else
+      if(epochHamming == 0)
+      {
+        output << " Yo-hou! Studing finished!\n";
+        break;
+      }
+      else
+      {
+        epochHammingPrev = epochHamming;
+        output << " Good epoch! Hammings are decreasing\n";
+      }
   }
   output.close();
   delete [] hid;

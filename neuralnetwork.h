@@ -32,6 +32,7 @@ private:
   short *_v;
 
   void _init(); // initializes network
+  void _initializeCoefficients();
   void _study(); // studies network
   void _countHidden(short *x, short *hid); // counts hidden layer
   void _countOutput(short *hid, short *y); // counts output layer
