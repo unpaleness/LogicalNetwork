@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <map>
 #include <ctime>
 #include <cstdlib>
 #include <cmath>
@@ -32,13 +33,16 @@ private:
   short *_v;
 
   void _init(); // initializes network
+  void _memerase();
   void _initializeCoefficients();
   void _study(); // studies network
   void _countHidden(short *x, short *hid); // counts hidden layer
   void _countOutput(short *hid, short *y); // counts output layer
   void _countSample(short *x, short *y, short *hid); // counts a sample
-  void _readFromFile(string str = "input.txt");
+  int _readFromFile(string str = "input.txt");
+  int _readNet(string str = "output.txt");
   void _writetoFile(string str = "output.txt");
+  void _interact(); // interacts with user
 };
 
 #endif // NEURALNETWORK_H

@@ -4,20 +4,13 @@ NeuralNetwork::NeuralNetwork()
 {
   srand(time(0));
   _isInitialized = false;
-  _readFromFile();
-  _study();
-  _writetoFile();
+  _interact();
 }
 
 NeuralNetwork::~NeuralNetwork()
 {
   if(_isInitialized)
-  {
-    delete _xSample;
-    delete _ySample;
-    delete _w;
-    delete _v;
-  }
+    _memerase();
 }
 
 /*
@@ -26,15 +19,22 @@ NeuralNetwork::~NeuralNetwork()
 
 void NeuralNetwork::_init()
 {
-  if(!_isInitialized)
-  {
-    _xSample = new short [_nX * _nSamples];
-    _ySample = new short [_nY * _nSamples];
-    _w = new short [_nX * _nHidden];
-    _v = new short [_nY * _nHidden];
-    _isInitialized = true;
-  }
+  if(_isInitialized)
+    _memerase();
+  _xSample = new short [_nX * _nSamples];
+  _ySample = new short [_nY * _nSamples];
+  _w = new short [_nX * _nHidden];
+  _v = new short [_nY * _nHidden];
+  _isInitialized = true;
   _initializeCoefficients();
+}
+
+void NeuralNetwork::_memerase()
+{
+  delete _xSample;
+  delete _ySample;
+  delete _w;
+  delete _v;
 }
 
 void NeuralNetwork::_initializeCoefficients()
@@ -364,9 +364,11 @@ void NeuralNetwork::_countSample(short *x, short *y, short *hid)
   _countOutput(hid, y);
 }
 
-void NeuralNetwork::_readFromFile(string str)
+int NeuralNetwork::_readFromFile(string str)
 {
   ifstream input(str.c_str(), ios::in);
+  if(!input.is_open())
+    return 0;
   input >> _nDis >> _nCon >> _nX >> _nY >> _nEpochs >> _nSamples;
   _nHidden = _nDis + _nCon;
   _init();
@@ -378,26 +380,129 @@ void NeuralNetwork::_readFromFile(string str)
       input >> _ySample[j * _nY + i];
   }
   input.close();
+  return 1;
+}
+
+int NeuralNetwork::_readNet(string str)
+{
+  ifstream input(str.c_str(), ios::out);
+  if(!input.is_open())
+    return 0;
+  input >> _nDis >> _nCon >> _nX >> _nY;
+  _nHidden = _nDis + _nCon;
+  _init();
+  for(int j = 0; j < _nHidden; j++)\
+    for(int i = 0; i < _nX; i++)
+      input >> _w[j * _nX + i];
+
+  for(int j = 0; j < _nY; j++)
+    for(int i = 0; i < _nHidden; i++)
+      input >> _v[j * _nHidden + i];
+  input.close();
+  return 1;
 }
 
 void NeuralNetwork::_writetoFile(string str)
 {
   ofstream output(str.c_str(), ios::out);
-  output << "Disjunctors: " <<  _nDis << '\n';
-  output << "Conjunctors: " << _nCon << '\n';
-  output << "Inputs: " << _nX << '\n';
-  output << "Outputs: " << _nY << '\n';
-  output << "Epochs: " << _nEpochs << '\n';
-  output << "Samples for study: " << _nSamples << '\n';
-  for(int j = 0; j < _nSamples; j++)
+  output << _nDis << '\n' << _nCon << '\n' << _nX << '\n' << _nY << '\n';
+  for(int j = 0; j < _nHidden; j++)
   {
-    output << j + 1 << " sample:\n";
     for(int i = 0; i < _nX; i++)
-      output << ' ' << _xSample[j * _nX + i];
+      output << ' ' << _w[j * _nX + i];
     output << '\n';
-    for(int i = 0; i < _nY; i++)
-      output << ' ' << _ySample[j * _nY + i];
+  }
+  for(int j = 0; j < _nY; j++)
+  {
+    for(int i = 0; i < _nHidden; i++)
+      output << ' ' << _v[j * _nHidden + i];
     output << '\n';
   }
   output.close();
+}
+
+void NeuralNetwork::_interact()
+{
+  bool isExit = false;
+  map <string, int> commands;
+  commands["exit"] = 1;
+  commands["help"] = 2;
+  commands["sample"] = 3;
+  commands["study"] = 4;
+  commands["readnet"] = 5;
+  string sCommand = "";
+  cout << "Welcome!\nType \"help\" to see a list of commands.\n";
+  while(!isExit)
+  {
+    cin >> sCommand;
+    switch(commands[sCommand])
+    {
+      case 1: // exit
+        isExit = true;
+        break;
+      case 2: // help
+        cout << "A list of commands:\n";
+        cout << "exit\n";
+        cout << "help\n";
+        cout << "sample\n";
+        cout << "study\n";
+        cout << "readnet\n";
+        break;
+      case 3:
+        if(_isInitialized)
+        {
+          char c;
+          short *x = new short [_nX];
+          short *hid = new short [_nHidden];
+          short *y = new short [_nY];
+          cout << "Enter " << _nX << " input variables:\n";
+          for(int i = 0; i < _nX; i++)
+          {
+            cin >> c;
+            if(c == 48)
+              x[i] = 0;
+            else
+              x[i] = 1;
+          }
+          _countSample(x, y, hid);
+          cout << "You have:";
+          for(int i = 0; i < _nY; i++)
+          {
+            if(i % int(sqrt(_nY)) == 0)
+              cout << '\n';
+            cout << ' ' << y[i];
+          }
+          cout << '\n';
+          delete [] x;
+          delete [] hid;
+          delete [] y;
+        }
+        else
+        {
+          cout << "Net is not initialized. Try to use \'readnet\' "
+               << "or \'study\' commands.\n";
+        }
+        break;
+      case 4:
+        if(_readFromFile())
+        {
+          _study();
+          _writetoFile();
+          cout << "Nets study process has successfully finished!\n";
+        }
+        else
+          cout << "File with study samples doesn\'t exist!\n";
+        break;
+      case 5:
+        if(_readNet())
+          cout << "Net parameters loaded.\n";
+        else
+          cout << "File with studied net doesn\'t exist!\n";
+        break;
+      default:
+        cout << "Command \'" << sCommand << "\' not found. Type \'help"
+             << "\' to see a list of commands.\n";
+        break;
+    }
+  }
 }
