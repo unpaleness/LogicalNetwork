@@ -26,7 +26,7 @@ void NeuralNetwork::_init()
   _w = new short [_nX * _nHidden];
   _v = new short [_nY * _nHidden];
   _isInitialized = true;
-  _initializeCoefficients();
+//  _initializeCoefficients();
 }
 
 void NeuralNetwork::_memerase()
@@ -40,9 +40,9 @@ void NeuralNetwork::_memerase()
 void NeuralNetwork::_initializeCoefficients()
 {
   for(int i = 0; i < _nX * _nHidden; i++)
-    _w[i] = rand() % 1;
+    _w[i] = rand() % 2;
   for(int i = 0; i < _nY * _nHidden; i++)
-    _v[i] = rand() % 1;
+    _v[i] = rand() % 2;
 }
 
 void NeuralNetwork::_study()
@@ -59,6 +59,8 @@ void NeuralNetwork::_study()
   ofstream output("study.log", ios::out);
   for(int nEpoch = 0; nEpoch < _nEpochs; nEpoch++)
   {
+    if(epochHammingPrev == _nSamples * _nY)
+      _initializeCoefficients();
     epochHamming = 0;
     output << "Epoch #" << nEpoch << '\n';
     for(int nSample = 0; nSample < _nSamples; nSample++)
@@ -133,6 +135,10 @@ void NeuralNetwork::_study()
               }
           }
         }
+        if(y[j] == 1 && ySample[j] == 0) // if we have 1 but want 0
+          for(int i = 0; i < _nHidden; i++)
+            if(hid[i] == 1 && cHid[i] == false)
+              cHid[i] = true;
       }
       /* <2> changing coefficients for selected hidden neurons */
 //      output << "   Hidden layer\n";
@@ -174,7 +180,7 @@ void NeuralNetwork::_study()
                 if(xSample[i] == 1 && _w[j * _nX + i] == 1)
                 {
                   _w[j * _nX + i] = 0;
-                  output << ' ' << i;
+//                  output << ' ' << i;
                 }
 //              output << " coefs changes from 1 to 0\n";
             }
@@ -295,21 +301,20 @@ void NeuralNetwork::_study()
     }
     if(epochHamming >= epochHammingPrev && epochHamming != 0)
     {
-      epochHammingPrev = _nSamples * _nY;
-      _initializeCoefficients();
-      output << " Bad epoch! Hammings are not decreasing. "
-             << "Reinitializing coefficients\n";
+//      epochHammingPrev = _nSamples * _nY;
+//      output << " Bad epoch! Hammings are not decreasing. "
+//             << "Reinitializing coefficients\n";
     }
     else
       if(epochHamming == 0)
       {
-        output << " Yo-hou! Studing finished!\n";
+        output << " Yo-hou! Study finished!\n";
         break;
       }
       else
       {
         epochHammingPrev = epochHamming;
-        output << " Good epoch! Hammings are decreasing\n";
+//        output << " Good epoch! Hammings are decreasing\n";
       }
   }
   output.close();
@@ -434,6 +439,7 @@ void NeuralNetwork::_interact()
   cout << "Welcome!\nType \"help\" to see a list of commands.\n";
   while(!isExit)
   {
+    cout << "Command: ";
     cin >> sCommand;
     switch(commands[sCommand])
     {
@@ -488,7 +494,7 @@ void NeuralNetwork::_interact()
         {
           _study();
           _writetoFile();
-          cout << "Nets study process has successfully finished!\n";
+          cout << "Net\'s study process has successfully finished!\n";
         }
         else
           cout << "File with study samples doesn\'t exist!\n";
