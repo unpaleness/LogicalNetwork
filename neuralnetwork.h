@@ -31,6 +31,7 @@ private:
   short *_ySample;
   short *_w;
   short *_v;
+  short _logMode;
 
   void _init(); // initializes network
   void _memerase();

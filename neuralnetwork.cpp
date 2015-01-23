@@ -4,6 +4,7 @@ NeuralNetwork::NeuralNetwork()
 {
   srand(time(0));
   _isInitialized = false;
+  _logMode = 0;
   _interact();
 }
 
@@ -40,9 +41,13 @@ void NeuralNetwork::_memerase()
 void NeuralNetwork::_initializeCoefficients()
 {
   for(int i = 0; i < _nX * _nHidden; i++)
+  {
     _w[i] = rand() % 2;
+  }
   for(int i = 0; i < _nY * _nHidden; i++)
+  {
     _v[i] = rand() % 2;
+  }
 }
 
 void NeuralNetwork::_study()
@@ -55,65 +60,78 @@ void NeuralNetwork::_study()
   bool *cHid = new bool [_nHidden];   // need to change hidden neuron
   short hamming;                      // Hamming distance for sample's output
   short epochHamming;                 // Hamming distance for epoch
-  short epochHammingPrev = _nSamples * _nY;
+  short epochBeforeHamming;           // Hamming distance before corrections
+  int *iSamples = new int [_nSamples];// sequence of indexes of samples ot study
   ofstream output("study.log", ios::out);
+  _initializeCoefficients();
   for(int nEpoch = 0; nEpoch < _nEpochs; nEpoch++)
   {
-    if(epochHammingPrev == _nSamples * _nY)
-      _initializeCoefficients();
     epochHamming = 0;
-    output << "Epoch #" << nEpoch << '\n';
+    epochBeforeHamming = 0;
+    if(_logMode > 0)
+      output << "Epoch #" << nEpoch << '\n';
+    for(int i = 0; i < _nSamples; i++)
+      iSamples[i] = -1;
+    for(int i = 0; i < _nSamples; i++)
+    {
+      int index;
+      while(iSamples[index = rand() % _nSamples] >= 0) {}
+      iSamples[index] = i;
+    }
     for(int nSample = 0; nSample < _nSamples; nSample++)
     {
-      xSample = _xSample + nSample * _nX; // setting up x for current sample
-      ySample = _ySample + nSample * _nY; // setting up y for current sample
+      xSample = _xSample + iSamples[nSample] * _nX; // setting up x for current sample
+      ySample = _ySample + iSamples[nSample] * _nY; // setting up y for current sample
       for(int i = 0; i < _nHidden; i++) // making all hidden neurons unchanged
         cHid[i] = false;
       /* count current sample */
       _countSample(xSample, y, hid);
-      /* output info */
-      output << " Sample #" << nSample << '\n';
-//      output << ' ';
-//      for(int i = 0; i < _nX; i++)
-//        output << ' ' << xSample[i];
-//      output << "\n ";
-//      for(int i = 0; i < _nY; i++)
-//        output << ' ' << ySample[i];
-//      output << "\n  Hidden neurons\n ";
-//      for(int i = 0; i < _nHidden; i++)
-//        output << ' ' << hid[i];
-//      output << '\n';
-//      output << "  Output neurons\n";
-//      output << ' ';
-//      for(int i = 0; i < _nY; i++)
-//        output << ' ' << y[i];
       hamming = 0;
       for(int i = 0; i < _nY; i++)
         if(y[i] != ySample[i])
           hamming++;
-      epochHamming += hamming;
-      output << "  Hamming before: " << setw(2) << hamming << '\n';
-//      output << "\n  Hidden coefficients\n     ";
-//      for(int i = 0; i < _nX; i++)
-//        output << ' ' << xSample[i];
-//      for(int j = 0; j < _nHidden; j++)
-//      {
-//        output << "\n  " << setw(2) << j << ':';
-//        for(int i = 0; i < _nX; i++)
-//          output << ' ' << _w[j * _nX + i];
-//      }
-//      output << "\n  Output coefficients\n     ";
-//      for(int i = 0; i < _nHidden; i++)
-//        output << ' ' << hid[i];
-//      for(int j = 0; j < _nY; j++)
-//      {
-//        output << "\n  " << setw(2) << j << ':';
-//        for(int i = 0; i < _nHidden; i++)
-//          output << ' ' << _v[j * _nHidden + i];
-//      }
-//      output << "\n  Studying\n";
+      epochBeforeHamming += hamming;
+      /* output info */
+      if(_logMode == 2)
+      {
+        output << "\n Sample #" << nSample << " with own index #"
+               << iSamples[nSample] << '\n' << "\n ";
+        for(int i = 0; i < _nX; i++)
+          output << ' ' << xSample[i];
+        output << "\n ";
+        for(int i = 0; i < _nY; i++)
+          output << ' ' << ySample[i];
+        output << "\n  Hidden neurons\n ";
+        for(int i = 0; i < _nHidden; i++)
+          output << ' ' << hid[i];
+        output << '\n';
+        output << "  Output neurons\n";
+        output << ' ';
+        for(int i = 0; i < _nY; i++)
+          output << ' ' << y[i];
+        output << "\n  Hamming before: " << setw(2) << hamming;
+        output << "\n  Hidden coefficients\n     ";
+        for(int i = 0; i < _nX; i++)
+          output << ' ' << xSample[i];
+        for(int j = 0; j < _nHidden; j++)
+        {
+          output << "\n  " << setw(2) << j << ':';
+          for(int i = 0; i < _nX; i++)
+            output << ' ' << _w[j * _nX + i];
+        }
+        output << "\n  Output coefficients\n     ";
+        for(int i = 0; i < _nHidden; i++)
+          output << ' ' << hid[i];
+        for(int j = 0; j < _nY; j++)
+        {
+          output << "\n  " << setw(2) << j << ':';
+          for(int i = 0; i < _nHidden; i++)
+            output << ' ' << _v[j * _nHidden + i];
+        }
+        output << "\n  Studying\n";
+        output << "   Output layer\n";
+      }
       /* <1> check which hidden neurons should be changed */
-//      output << "   Output layer\n";
       for(int j = 0; j < _nY; j++)
       {
         if(y[j] == 0 && ySample[j] == 1) // if we have 0 but want 1
@@ -125,29 +143,39 @@ void NeuralNetwork::_study()
           if(amount == _nHidden) // if all hiddens are zeroes
           {
             int index = rand() % _nHidden;
-            for(int i = 0; i < _nHidden; i++)
-              if(i == index)
-              {
-                cHid[i] = true;
-//                output << "    " << setw(2) << j << ": " << i
-//                       << " hidden neuron should be changed\n";
-                break;
-              }
+            cHid[index] = true;
+            if(_logMode == 2)
+              output << "    " << setw(2) << j << ": " << index
+                     << " hidden neuron should be changed\n";
           }
         }
         if(y[j] == 1 && ySample[j] == 0) // if we have 1 but want 0
+        {
+          if(_logMode == 2)
+            output << "    " << setw(2) << j << ':';
           for(int i = 0; i < _nHidden; i++)
             if(hid[i] == 1 && cHid[i] == false)
+            {
               cHid[i] = true;
+              if(_logMode == 2)
+                output << ' ' << i;
+            }
+          if(_logMode == 2)
+            output << " hidden neurons should be changed\n";
+        }
       }
       /* <2> changing coefficients for selected hidden neurons */
-//      output << "   Hidden layer\n";
+      if(_logMode == 2)
+        output << "   Hidden layer\n";
       for(int j = 0; j < _nHidden; j++)
         if(cHid[j]) // if this neuron needs to be changed
+        {
           if(j < _nDis) // if neuron is a disjunctor
+          {
             if(hid[j] == 0) // if neuron is 0 so it needs to be true
             {
-//              output << " d  " << setw(2) << j << ':';
+              if(_logMode == 2)
+                output << " d  " << setw(2) << j << ':';
               int amount = 0; // amount of trues among inputs
               for(int i = 0; i < _nX; i++)
                 if(xSample[i] == 1)
@@ -166,39 +194,50 @@ void NeuralNetwork::_study()
                     }
                     k++;
                   }
-//                output << ' ' << index << " coef changes to true\n";
+                if(_logMode == 2)
+                  output << ' ' << index << " coef changes to true\n";
               }
               else
               {
-//                output << " should be 1 but no one true input was found!\n";
+                if(_logMode == 2)
+                  output << " should be 1 but no one true input was found!\n";
               }
             }
             else // if neuron is 1 so it needs to be false
             {
-//              output << " d  " << setw(2) << j << ':';
+              if(_logMode == 2)
+                output << " d  " << setw(2) << j << ':';
               for(int i = 0; i < _nX; i++)
                 if(xSample[i] == 1 && _w[j * _nX + i] == 1)
                 {
                   _w[j * _nX + i] = 0;
-//                  output << ' ' << i;
+                  if(_logMode == 2)
+                    output << ' ' << i;
                 }
-//              output << " coefs changes from 1 to 0\n";
+              if(_logMode == 2)
+                output << " coefs changes from 1 to 0\n";
             }
+          }
           else // if neuron is a conjunctor
+          {
             if(hid[j] == 0) // if neuron is 0 so it needs to be true
             {
-//              output << " c  " << setw(2) << j << ':';
+              if(_logMode == 2)
+                output << " c  " << setw(2) << j << ':';
               for(int i = 0; i < _nX; i++)
                 if(xSample[i] == 0 && _w[j * _nX + i] == 0)
                 {
                   _w[j * _nX + i] = 1;
-//                  output << ' ' << i;
+                  if(_logMode == 2)
+                    output << ' ' << i;
                 }
-//              output << " coefs changes from 0 to 1\n";
+              if(_logMode == 2)
+                output << " coefs changes from 0 to 1\n";
             }
             else // if neuron is 1 so it needs to be false
             {
-//              output << " c  " << setw(2) << j << ':';
+              if(_logMode == 2)
+                output << " c  " << setw(2) << j << ':';
               int amount = 0; // amount of falses among inputs
               for(int i = 0; i < _nX; i++)
                 if(xSample[i] == 0)
@@ -217,39 +256,51 @@ void NeuralNetwork::_study()
                     }
                     k++;
                   }
-//                output << ' ' << index << " coef changes to false\n";
+                if(_logMode == 2)
+                  output << ' ' << index << " coef changes to false\n";
               }
               else
               {
-//                output << " should be 0 but no one false input was found!\n";
+                if(_logMode == 2)
+                  output << " should be 0 but no one false input was found!\n";
               }
             }
+          }
+        }
       /* <3> changing coefficients for output neurons */
       _countSample(xSample, y, hid);
-//      output << "  Hidden coefficients\n     ";
-//      for(int i = 0; i < _nX; i++)
-//        output << ' ' << xSample[i];
-//      for(int j = 0; j < _nHidden; j++)
-//      {
-//        output << "\n  " << setw(2) << j << ':';
-//        for(int i = 0; i < _nX; i++)
-//          output << ' ' << _w[j * _nX + i];
-//      }
-//      output << "\n  Output coefficients\n     ";
-//      for(int i = 0; i < _nHidden; i++)
-//        output << ' ' << hid[i];
-//      for(int j = 0; j < _nY; j++)
-//      {
-//        output << "\n  " << setw(2) << j << ':';
-//        for(int i = 0; i < _nHidden; i++)
-//          output << ' ' << _v[j * _nHidden + i];
-//      }
-//      output << "\n   Output layer\n";
+      if(_logMode == 2)
+      {
+        output << "  Output neurons\n";
+        output << ' ';
+        for(int i = 0; i < _nY; i++)
+          output << ' ' << y[i];
+        output << "\n  Hidden coefficients\n     ";
+        for(int i = 0; i < _nX; i++)
+          output << ' ' << xSample[i];
+        for(int j = 0; j < _nHidden; j++)
+        {
+          output << "\n  " << setw(2) << j << ':';
+          for(int i = 0; i < _nX; i++)
+            output << ' ' << _w[j * _nX + i];
+        }
+        output << "\n  Output coefficients\n     ";
+        for(int i = 0; i < _nHidden; i++)
+          output << ' ' << hid[i];
+        for(int j = 0; j < _nY; j++)
+        {
+          output << "\n  " << setw(2) << j << ':';
+          for(int i = 0; i < _nHidden; i++)
+            output << ' ' << _v[j * _nHidden + i];
+        }
+        output << "\n   Output layer\n";
+      }
       for(int j = 0; j < _nY; j++)
       {
         if(y[j] == 0 && ySample[j] == 1) // if we have 0 but want 1
         {
-//          output << "    " << setw(2) << j << ':';
+          if(_logMode == 2)
+            output << "    " << setw(2) << j << ':';
           int amount = 0; // amount of trues among hiddens
           for(int i = 0; i < _nHidden; i++)
             if(hid[i] == 1)
@@ -268,54 +319,55 @@ void NeuralNetwork::_study()
                 }
                 k++;
               }
-//            output << ' ' << index << " coef changes from 0 to 1\n";
+            if(_logMode == 2)
+              output << ' ' << index << " coef changes from 0 to 1\n";
           }
           else
           {
-//            output << " should be 1 but no one true hidden was found!\n";
+            if(_logMode == 2)
+              output << " should be 1 but no one true hidden was found!\n";
           }
         }
         if(y[j] == 1 && ySample[j] == 0) // if we have 1 but want 0
         {
-//          output << "    " << setw(2) << j << ':';
+          if(_logMode == 2)
+            output << "    " << setw(2) << j << ':';
           for(int i = 0; i < _nHidden; i++)
             if(hid[i] == 1 && _v[j * _nHidden + i] == 1)
             {
               _v[j * _nHidden + i] = 0;
-//              output << ' ' << i;
+              if(_logMode == 2)
+                output << ' ' << i;
             }
-//          output << " coefs changes from 1 to 0\n";
+          if(_logMode == 2)
+            output << " coefs changes from 1 to 0\n";
         }
       }
       _countSample(xSample, y, hid);
-//      output << '\n';
-//      output << "  Output neurons\n";
-//      output << ' ';
-//      for(int i = 0; i < _nY; i++)
-//        output << ' ' << y[i];
-//      hamming = 0;
-//      for(int i = 0; i < _nY; i++)
-//        if(y[i] != ySample[i])
-//          hamming++;
-//      output << "  Hamming after:  " << setw(2) << hamming << '\n';
+      hamming = 0;
+      for(int i = 0; i < _nY; i++)
+        if(y[i] != ySample[i])
+          hamming++;
+      epochHamming += hamming;
+      if(_logMode == 2)
+      {
+        output << "  Output neurons\n";
+        output << ' ';
+        for(int i = 0; i < _nY; i++)
+          output << ' ' << y[i];
+        output << "\n  Hamming after:  " << setw(2) << hamming << '\n';
+      }
     }
-    if(epochHamming >= epochHammingPrev && epochHamming != 0)
+    if(_logMode > 0)
     {
-//      epochHammingPrev = _nSamples * _nY;
-//      output << " Bad epoch! Hammings are not decreasing. "
-//             << "Reinitializing coefficients\n";
+      output << "Before study error: " << epochBeforeHamming << '\n';
+      output << "After study error: " << epochHamming << '\n';
     }
-    else
-      if(epochHamming == 0)
-      {
-        output << " Yo-hou! Study finished!\n";
-        break;
-      }
-      else
-      {
-        epochHammingPrev = epochHamming;
-//        output << " Good epoch! Hammings are decreasing\n";
-      }
+    if(epochHamming == 0 && epochBeforeHamming == 0)
+    {
+        output << " Yo-hou! Study finished on " << nEpoch << " epoch!\n";
+      break;
+    }
   }
   output.close();
   delete [] hid;
@@ -324,6 +376,7 @@ void NeuralNetwork::_study()
 //  delete [] ySample;
   delete [] dY;
   delete [] cHid;
+  delete [] iSamples;
 }
 
 void NeuralNetwork::_countHidden(short *x, short *hid)
@@ -435,6 +488,7 @@ void NeuralNetwork::_interact()
   commands["sample"] = 3;
   commands["study"] = 4;
   commands["readnet"] = 5;
+  commands["log"] = 6;
   string sCommand = "";
   cout << "Welcome!\nType \"help\" to see a list of commands.\n";
   while(!isExit)
@@ -453,6 +507,7 @@ void NeuralNetwork::_interact()
         cout << "sample\n";
         cout << "study\n";
         cout << "readnet\n";
+        cout << "log\n";
         break;
       case 3:
         if(_isInitialized)
@@ -504,6 +559,20 @@ void NeuralNetwork::_interact()
           cout << "Net parameters loaded.\n";
         else
           cout << "File with studied net doesn\'t exist!\n";
+        break;
+      case 6:
+        {
+          int temp;
+          cout << "Set logging mode (0 - disable, 1 - only errors, 2 - full; "
+               << "now it is " << _logMode << "): ";
+          cin >> temp;
+          if(temp < 0)
+            temp = 0;
+          if(temp > 2)
+            temp = 2;
+          _logMode = temp;
+          cout << "Logging mode is set to " << _logMode << "!\n";
+        }
         break;
       default:
         cout << "Command \'" << sCommand << "\' not found. Type \'help"
